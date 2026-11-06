@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>STUDIO HONG — 상상을 영화로 만드는 AI 영상 스튜디오</title>
+<meta name="description" content="STUDIO HONG은 역사와 SF, 드라마, 뮤직비디오, 브랜드 영상 등 다양한 장르의 시네마틱 영상을 제작하는 AI 영상 스튜디오입니다.">
+<meta property="og:title" content="STUDIO HONG">
+<meta property="og:description" content="상상을 영화로 만드는 AI 영상 스튜디오">
+<meta property="og:image" content="assets/hero-poster.jpg">
+<meta name="theme-color" content="#D2C8BC">
+<link rel="preload" as="image" href="assets/hero-poster-sm.jpg" media="(max-width: 899px)">
+<link rel="stylesheet" href="styles.css">
+<style>
+  /* ================= HERO ================= */
+  .hero {
+    position: relative; min-height: 100svh; background: var(--paper-hero);
+    display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 9fr); align-items: center;
+    padding: calc(var(--nav-h) + 24px) 0 64px; overflow: hidden;
+  }
+  /* hero → paper fade, so the logo film paper flows into the site paper */
+  .hero::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 120px; pointer-events: none;
+    background: linear-gradient(to bottom, rgba(238,232,222,0), var(--paper));
+  }
+  .hero-film {
+    grid-column: 2; grid-row: 1; position: relative; aspect-ratio: 16 / 9; width: 100%;
+    margin-right: calc(var(--pad) * -1);
+    -webkit-mask-image: radial-gradient(ellipse 72% 78% at 54% 50%, #000 62%, transparent 100%);
+            mask-image: radial-gradient(ellipse 72% 78% at 54% 50%, #000 62%, transparent 100%);
+  }
+  .hero-film video, .hero-film img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .hero-film img { opacity: 0; transition: opacity .4s ease; }
+  .hero-film.still img { opacity: 1; }
+  .hero-film.still video { visibility: hidden; }
+
+  .hero-copy {
+    grid-column: 1; grid-row: 1; position: relative; z-index: 2;
+    padding-left: max(var(--pad), calc((100vw - var(--max)) / 2 + var(--pad)));
+    padding-right: 16px;
+  }
+  .hero-kicker { font-size: 12px; font-weight: 600; letter-spacing: .24em; color: var(--ink-2); display: flex; align-items: center; gap: 10px; }
+  .hero-kicker::before { content: ''; width: 28px; height: 1px; background: var(--ink-2); }
+  .hero h1 {
+    font-family: var(--serif-ko); font-weight: 600; color: var(--ink);
+    font-size: clamp(34px, 3.6vw, 58px); line-height: 1.28; letter-spacing: -.025em;
+    margin: 26px 0 22px; text-wrap: balance;
+  }
+  .hero h1 em { font-style: normal; color: var(--red); }
+  .hero-sub { font-size: clamp(15px, 1.15vw, 18px); color: var(--ink-2); max-width: 30em; line-height: 1.75; }
+  .hero-cta { display: flex; gap: 12px; margin-top: 40px; flex-wrap: wrap; }
+
+  .hero-copy > * { opacity: 0; transform: translateY(10px); animation: heroIn .9s cubic-bezier(.2,.7,.2,1) forwards; }
+  .hero-copy > :nth-child(2) { animation-delay: .08s; }
+  .hero-copy > :nth-child(3) { animation-delay: .16s; }
+  .hero-copy > :nth-child(4) { animation-delay: .24s; }
+  @keyframes heroIn { to { opacity: 1; transform: none; } }
+
+  /* 첫 화면만 먼저: 작품 보기를 누르기 전까지 아래 콘텐츠 숨김 */
+  #rest[hidden] { display: none; }
+  #rest { animation: restIn .7s ease both; }
+  @keyframes restIn { from { opacity: 0; } to { opacity: 1; } }
+  .hero-scroll {
+    position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 2;
+    font-size: 11px; letter-spacing: .24em; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 10px;
+  }
+  .hero-scroll::after { content: ''; width: 1px; height: 32px; background: linear-gradient(var(--ink-2), transparent); }
+
+  @media (max-width: 1100px) {
+    .hero { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); }
+  }
+  @media (max-width: 899px) {
+    .hero { display: flex; flex-direction: column; justify-content: center; min-height: 100svh; padding: var(--nav-h) 0 48px; }
+    .hero-film { width: 118%; margin: 8px -9% 0; -webkit-mask-image: radial-gradient(ellipse 60% 70% at 50% 50%, #000 70%, transparent 100%); mask-image: radial-gradient(ellipse 60% 70% at 50% 50%, #000 70%, transparent 100%); }
+    .hero-copy { padding: 8px var(--pad) 0; }
+    .hero h1 { margin-top: 18px; }
+    .hero-cta { margin-top: 32px; }
+    .hero-cta .btn { flex: 1 1 160px; }
+    .hero-scroll { display: none; }
+  }
+
+  /* ================= WORKS ================= */
+  .works { padding: clamp(72px, 9vw, 140px) 0 clamp(80px, 10vw, 160px); }
+  .works-lead { margin-bottom: clamp(48px, 6vw, 88px); }
+  .works-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(48px, 5vw, 72px) clamp(20px, 3vw, 40px); }
+  .works-foot {
+    margin-top: clamp(56px, 7vw, 96px); padding-top: 28px; border-top: 1px solid var(--line-strong);
+    display: flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap;
+  }
+  .genre-index { display: flex; flex-wrap: wrap; gap: 6px 22px; list-style: none; font-size: 14px; color: var(--ink-2); }
+  .genre-index a { display: inline-flex; gap: 6px; align-items: baseline; padding: 6px 0; }
+  .genre-index a:hover { color: var(--red); }
+  .genre-index small { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  @media (max-width: 760px) { .works-grid { grid-template-columns: 1fr; } }
+
+  /* ================= ABOUT ================= */
+  .about { background: var(--paper-2); padding: clamp(80px, 10vw, 160px) 0; position: relative; }
+  .about-grid { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 7fr); gap: clamp(32px, 6vw, 96px); align-items: start; }
+  .about-statement {
+    font-family: var(--serif-ko); font-weight: 600; font-size: clamp(26px, 3vw, 44px); line-height: 1.45; letter-spacing: -.02em;
+    text-wrap: balance;
+  }
+  .about-statement em { font-style: normal; color: var(--red); }
+  .about-body { margin-top: 32px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px 40px; font-size: 16px; color: var(--ink-2); }
+  .about-body p { text-wrap: pretty; }
+  .about-mark { margin-top: 56px; display: flex; align-items: center; gap: 18px; color: var(--muted); font-size: 13px; }
+  .about-mark .wordmark { font-size: 13px; }
+  .about-mark::before { content: ''; width: 40px; height: 1px; background: var(--gold); }
+  @media (max-width: 900px) { .about-grid { grid-template-columns: 1fr; } .about-body { grid-template-columns: 1fr; } }
+
+  /* ================= SERVICES ================= */
+  .services { padding: clamp(80px, 10vw, 160px) 0; }
+  .svc-list { list-style: none; border-top: 1px solid var(--line-strong); }
+  .svc {
+    display: grid; grid-template-columns: 72px minmax(0, 4fr) minmax(0, 5fr) 40px; gap: 24px; align-items: baseline;
+    padding: 30px 0; border-bottom: 1px solid var(--line); transition: background .3s ease;
+  }
+  .svc:hover { background: linear-gradient(90deg, transparent, rgba(192,42,30,.04), transparent); }
+  .svc-no { font-family: var(--serif-en); font-size: 18px; color: var(--muted); font-style: italic; }
+  .svc-name { font-family: var(--serif-en); font-size: clamp(30px, 3.6vw, 52px); font-weight: 500; line-height: 1; letter-spacing: .01em; }
+  .svc-name small { display: block; font-family: var(--serif-ko); font-size: 15px; font-weight: 400; color: var(--ink-2); margin-top: 10px; letter-spacing: 0; }
+  .svc-desc { font-size: 15.5px; color: var(--ink-2); text-wrap: pretty; }
+  .svc-go { justify-self: end; font-size: 18px; color: var(--muted); transition: color .2s, transform .2s; }
+  .svc:hover .svc-go { color: var(--red); transform: translateX(4px); }
+  .svc:hover .svc-name { color: var(--red-deep); }
+  @media (max-width: 760px) {
+    .svc { grid-template-columns: 40px 1fr 24px; gap: 8px 14px; padding: 24px 0; }
+    .svc-desc { grid-column: 2 / 4; }
+    .svc-go { grid-column: 3; grid-row: 1; }
+  }
+
+  /* ================= CONTACT ================= */
+  .contact { background: var(--ink); color: var(--paper); padding: clamp(80px, 10vw, 160px) 0; position: relative; overflow: hidden; }
+  .contact .eyebrow { color: rgba(238,232,222,.7); }
+  .contact-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: clamp(40px, 7vw, 120px); }
+  .contact h2 { font-family: var(--serif-ko); font-weight: 600; font-size: clamp(32px, 3.8vw, 56px); line-height: 1.3; letter-spacing: -.02em; margin: 22px 0 24px; text-wrap: balance; }
+  .contact-lede { color: rgba(238,232,222,.68); max-width: 28em; }
+  .channels { margin-top: 48px; display: grid; gap: 0; border-top: 1px solid rgba(238,232,222,.18); }
+  .channel {
+    display: grid; grid-template-columns: 110px 1fr auto; align-items: center; gap: 16px;
+    padding: 22px 0; border-bottom: 1px solid rgba(238,232,222,.18); transition: color .2s;
+  }
+  .channel span { font-size: 11.5px; letter-spacing: .2em; color: rgba(238,232,222,.5); font-weight: 600; }
+  .channel strong { font-family: var(--serif-en); font-weight: 500; font-size: clamp(22px, 2.2vw, 30px); letter-spacing: .01em; word-break: break-all; }
+  .channel i { font-style: normal; color: rgba(238,232,222,.5); transition: transform .2s, color .2s; }
+  .channel:hover strong { color: #E8B9A9; }
+  .channel:hover i { color: #E0574A; transform: translate(3px, -3px); }
+
+  .form { display: grid; grid-template-columns: 1fr 1fr; gap: 28px 24px; align-content: start; }
+  .field { display: grid; gap: 10px; }
+  .field.full { grid-column: 1 / -1; }
+  .field label, .field legend { font-size: 12px; letter-spacing: .14em; font-weight: 600; color: rgba(238,232,222,.62); }
+  .field input, .field select, .field textarea {
+    width: 100%; font: inherit; font-size: 16px; color: var(--paper); background: transparent;
+    border: 0; border-bottom: 1px solid rgba(238,232,222,.28); padding: 10px 0 12px; border-radius: 0; outline: none;
+    transition: border-color .2s;
+  }
+  .field textarea { min-height: 120px; resize: vertical; line-height: 1.65; }
+  .field input::placeholder, .field textarea::placeholder { color: rgba(238,232,222,.32); }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--paper); }
+  .field select { appearance: none; -webkit-appearance: none; cursor: pointer;
+    background-image: linear-gradient(45deg, transparent 50%, rgba(238,232,222,.6) 50%), linear-gradient(135deg, rgba(238,232,222,.6) 50%, transparent 50%);
+    background-position: calc(100% - 10px) 52%, calc(100% - 5px) 52%; background-size: 5px 5px; background-repeat: no-repeat; }
+  .field select option { color: var(--ink); background: var(--paper); }
+  fieldset.field { border: 0; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+  .chip input { position: absolute; opacity: 0; pointer-events: none; }
+  .chip span {
+    display: inline-flex; align-items: center; height: 40px; padding: 0 16px; font-size: 14px; cursor: pointer;
+    border: 1px solid rgba(238,232,222,.28); color: rgba(238,232,222,.82); transition: all .2s;
+  }
+  .chip span:hover { border-color: rgba(238,232,222,.7); }
+  .chip input:checked + span { background: var(--paper); color: var(--ink); border-color: var(--paper); }
+  .chip input:focus-visible + span { outline: 2px solid #E0574A; outline-offset: 2px; }
+  .form-foot { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-top: 8px; }
+  .form-note { font-size: 13px; color: rgba(238,232,222,.5); }
+  .btn-light { background: var(--paper); color: var(--ink); border-color: var(--paper); }
+  .btn-light:hover { background: var(--red); color: var(--paper); border-color: var(--red); }
+  @media (max-width: 900px) { .contact-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 560px) { .form { grid-template-columns: 1fr; } .channel { grid-template-columns: 1fr auto; } .channel span { grid-column: 1 / -1; } .form-foot .btn { width: 100%; } }
+</style>
+</head>
+<body>
+
+<!-- ============ NAV ============ -->
+<header class="nav" data-screen-label="Nav">
+  <div class="wrap">
+    <a href="#top" class="wordmark" aria-label="STUDIO HONG 홈">STUDIO HONG</a>
+    <nav aria-label="주 메뉴">
+      <ul class="nav-links">
+        <li><a href="#works">WORKS</a></li>
+        <li><a href="#about">ABOUT</a></li>
+        <li><a href="#services">SERVICES</a></li>
+        <li><a href="#contact">CONTACT</a></li>
+      </ul>
+    </nav>
+    <button class="nav-toggle" aria-label="메뉴 열기" aria-expanded="false"><span></span><span></span></button>
+  </div>
+</header>
+<div class="mobile-menu" aria-label="모바일 메뉴">
+  <a href="#works">WORKS <small>작품</small></a>
+  <a href="#about">ABOUT <small>소개</small></a>
+  <a href="#services">SERVICES <small>제작 분야</small></a>
+  <a href="#contact">CONTACT <small>문의</small></a>
+  <div class="mm-foot"><a href="mailto:dwsmins1@gmail.com" style="font:inherit;border:0;padding:0">dwsmins1@gmail.com</a><a href="https://www.instagram.com/dwsmins/" target="_blank" rel="noopener" style="font:inherit;border:0;padding:0">@dwsmins</a></div>
+</div>
+
+<main id="top">
+
+<!-- ============ HERO ============ -->
+<section class="hero" data-screen-label="01 Hero">
+  <div class="hero-film" id="heroFilm">
+    <!-- 영상은 JS가 화면 크기에 맞는 파일(720p / 1080p)을 골라 1회만 재생 -->
+    <video id="heroVideo" muted playsinline preload="auto" disablepictureinpicture aria-hidden="true"></video>
+    <img id="heroStill" src="assets/hero-poster-sm.jpg"
+         srcset="assets/hero-poster-sm.jpg 960w, assets/hero-poster.jpg 1920w"
+         sizes="(max-width: 899px) 118vw, 64vw"
+         alt="붉은색과 검은색 잉크 위에 금색 STUDIO HONG 로고">
+  </div>
+
+  <div class="hero-copy">
+    <div class="hero-kicker">AI CINEMATIC FILM STUDIO</div>
+    <h1>상상을 <em>영화</em>로 만드는<br>AI 영상 스튜디오</h1>
+    <p class="hero-sub">역사와 SF, 다양한 장르의 시네마틱 영상을 제작합니다.</p>
+    <div class="hero-cta">
+      <a href="#works" class="btn btn-primary">대표 작품 보기 <span class="arr">→</span></a>
+      <a href="#contact" class="btn btn-ghost">제작 문의</a>
+    </div>
+  </div>
+</section>
+
+<div id="rest" hidden>
+
+<!-- ============ WORKS ============ -->
+<section class="works" id="works" data-screen-label="02 Works">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div>
+        <div class="eyebrow">Selected Works</div>
+        <h2 class="sec-title">Works<span class="ko">STUDIO HONG의 대표 작품</span></h2>
+      </div>
+      <a href="works.html" class="link-arrow">전체 작품 보기 <span class="arr">→</span></a>
+    </div>
+
+    <div class="works-lead reveal" id="worksLead"></div>
+    <div class="works-grid" id="worksGrid"></div>
+
+    <div class="works-foot reveal">
+      <ul class="genre-index" id="genreIndex" aria-label="장르별 작품 보기"></ul>
+      <a href="works.html" class="btn btn-primary">전체 작품 보기 <span class="arr">→</span></a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ABOUT ============ -->
+<section class="about" id="about" data-screen-label="03 About">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div>
+        <div class="eyebrow">About</div>
+        <h2 class="sec-title">The Studio<span class="ko">스튜디오 소개</span></h2>
+      </div>
+    </div>
+    <div class="about-grid">
+      <div></div>
+      <div class="reveal">
+        <p class="about-statement">STUDIO HONG은 AI 기술로<br><em>영화적인 영상</em>을 만드는 스튜디오입니다.</p>
+        <div class="about-body">
+          <p>역사 속 한 장면부터 아직 오지 않은 미래까지, 카메라로 담기 어려웠던 이야기를 스크린 위의 영상으로 옮깁니다.</p>
+          <p>기술은 도구일 뿐, 중심은 이야기와 장면입니다. 한 컷의 빛과 구도, 리듬까지 영화를 만드는 태도로 완성합니다.</p>
+        </div>
+        <div class="about-mark"><span class="wordmark gold">STUDIO HONG</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SERVICES ============ -->
+<section class="services" id="services" data-screen-label="04 Services">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div>
+        <div class="eyebrow">Services</div>
+        <h2 class="sec-title">What We Make<span class="ko">제작 분야</span></h2>
+      </div>
+    </div>
+    <ul class="svc-list reveal" id="svcList"></ul>
+  </div>
+</section>
+
+<!-- ============ CONTACT ============ -->
+<section class="contact" id="contact" data-screen-label="05 Contact">
+  <div class="wrap contact-grid">
+    <div>
+      <div class="eyebrow">Contact</div>
+      <h2>함께 만들 이야기를<br>들려주세요.</h2>
+      <p class="contact-lede">프로젝트 종류와 일정, 원하는 분위기를 알려 주시면 확인 후 회신드립니다.</p>
+      <div class="channels">
+        <a class="channel" href="mailto:dwsmins1@gmail.com"><span>EMAIL</span><strong>dwsmins1@gmail.com</strong><i>↗</i></a>
+        <a class="channel" href="https://www.instagram.com/dwsmins/" target="_blank" rel="noopener"><span>INSTAGRAM</span><strong>@dwsmins</strong><i>↗</i></a>
+      </div>
+    </div>
+
+    <form class="form" id="contactForm" novalidate>
+      <fieldset class="field full">
+        <legend>프로젝트 종류</legend>
+        <div class="chips">
+          <label class="chip"><input type="radio" name="type" value="역사"><span>역사</span></label>
+          <label class="chip"><input type="radio" name="type" value="SF"><span>SF</span></label>
+          <label class="chip"><input type="radio" name="type" value="드라마"><span>드라마</span></label>
+          <label class="chip"><input type="radio" name="type" value="뮤직비디오"><span>뮤직비디오</span></label>
+          <label class="chip"><input type="radio" name="type" value="브랜드 영상"><span>브랜드 영상</span></label>
+          <label class="chip"><input type="radio" name="type" value="기타"><span>기타</span></label>
+        </div>
+      </fieldset>
+      <div class="field">
+        <label for="f-length">원하는 영상 길이</label>
+        <select id="f-length" name="length">
+          <option value="">선택해 주세요</option>
+          <option>30초 이내</option>
+          <option>1분 내외</option>
+          <option>2–3분</option>
+          <option>5분 내외</option>
+          <option>5분 이상</option>
+          <option>미정 · 상담 후 결정</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="f-date">희망 일정</label>
+        <input id="f-date" name="schedule" type="text" placeholder="예) 12월 중순 공개 희망">
+      </div>
+      <div class="field">
+        <label for="f-name">이름 · 소속</label>
+        <input id="f-name" name="name" type="text" placeholder="홍길동 / 회사명" autocomplete="name">
+      </div>
+      <div class="field">
+        <label for="f-email">회신받을 이메일</label>
+        <input id="f-email" name="email" type="email" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="field full">
+        <label for="f-msg">문의 내용</label>
+        <textarea id="f-msg" name="message" placeholder="기획 의도, 참고 영상, 예산 범위 등 자유롭게 적어 주세요."></textarea>
+      </div>
+      <div class="form-foot">
+        <p class="form-note">보내기를 누르면 메일 앱에서 작성된 내용이 열립니다.</p>
+        <button type="submit" class="btn btn-light">문의 보내기 <span class="arr">→</span></button>
+      </div>
+    </form>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="wrap">
+    <div>
+      <div class="wordmark">STUDIO HONG</div>
+      <p style="margin-top:14px">© <span id="yr"></span> STUDIO HONG. All rights reserved.</p>
+    </div>
+    <nav aria-label="하단 메뉴"><a href="#works">WORKS</a><a href="#about">ABOUT</a><a href="#services">SERVICES</a><a href="#contact">CONTACT</a></nav>
+  </div>
+</footer>
+</div><!-- /#rest -->
+</main>
+
+<script src="works-data.js"></script>
+<script src="site.js"></script>
+<script>
+/* ---------------- HERO FILM: 1회 재생, 끝나면 마지막 장면 유지 ---------------- */
+(function () {
+  const film = document.getElementById('heroFilm');
+  const v = document.getElementById('heroVideo');
+  const showStill = () => film.classList.add('still');
+
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const saveData = navigator.connection && (navigator.connection.saveData || /(^|-)2g$/.test(navigator.connection.effectiveType || ''));
+  if (reduce || saveData) { showStill(); return; }
+
+  const small = window.innerWidth < 900;
+  const webm = v.canPlayType('video/webm; codecs="vp9"');
+  v.src = small ? 'assets/hero-720.mp4' : (webm ? 'assets/hero-1080.webm' : 'assets/hero-1080.mp4');
+  v.loop = false;
+  v.muted = true; v.defaultMuted = true;
+
+  // 영상 로딩이 느리면 기다리게 하지 않고 바로 마지막 장면을 보여 줌
+  let timeout;
+  v.addEventListener('playing', () => clearTimeout(timeout), { once: true });
+  v.addEventListener('ended', () => { clearTimeout(timeout); /* 마지막 프레임 그대로 정지 */ });
+  v.addEventListener('error', () => { clearTimeout(timeout); showStill(); });
+
+  // 첫 화면이 실제로 보일 때만 재생 (화면 밖에서 재생되어 놓치는 일 방지)
+  let started = false;
+  const start = () => {
+    if (started) return; started = true;
+    const p = v.play();
+    if (p && p.catch) p.catch(() => { clearTimeout(timeout); showStill(); });
+  };
+  const arm = () => { timeout = setTimeout(() => { if (v.currentTime === 0) { showStill(); v.pause(); } }, 3500); };
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver((es) => {
+      if (es.some((e) => e.isIntersecting && e.intersectionRatio >= 0.5)) { io.disconnect(); arm(); start(); }
+    }, { threshold: [0, 0.5] });
+    io.observe(film);
+  } else { arm(); start(); }
+})();
+
+/* ---------------- WORKS ---------------- */
+(function () {
+  const { WORKS, GENRES, workCard, observeReveals, hasGenre } = window.StudioHong;
+  const all = WORKS.map((w, i) => ({ w, i }));
+  const lead = all.find((x) => x.w.featured) || all[0];
+  // 대표작 다음 4칸: 다른 대표작 먼저, 남는 칸은 목록 순서대로
+  const others = all.filter((x) => x !== lead);
+  const rest = [...others.filter((x) => x.w.featured), ...others.filter((x) => !x.w.featured)];
+  if (lead) document.getElementById('worksLead').innerHTML = workCard(lead.w, lead.i, { lead: true });
+  document.getElementById('worksGrid').innerHTML = rest.slice(0, 4)
+    .map((x) => `<div class="reveal">${workCard(x.w, x.i)}</div>`).join('');
+
+  document.getElementById('genreIndex').innerHTML = GENRES.filter((g) => g.key !== 'all').map((g) => {
+    const n = WORKS.filter((w) => hasGenre(w, g.key)).length;
+    if (!n) return '';
+    return `<li><a href="works.html?genre=${g.key}">${g.ko} <small>${String(n).padStart(2, '0')}</small></a></li>`;
+  }).join('');
+
+  /* services */
+  const SVC = {
+    history: '사료와 시대 고증을 바탕으로, 기록 속 인물과 사건을 한 편의 장면으로 재현합니다.',
+    sf: '아직 존재하지 않는 도시와 기계, 미래의 풍경을 설득력 있는 화면으로 설계합니다.',
+    drama: '인물의 감정과 관계에 집중한 서사형 영상. 단편과 시리즈 형식 모두 가능합니다.',
+    mv: '곡의 무드와 가사를 해석해 음악과 함께 기억되는 비주얼을 만듭니다.',
+    brand: '브랜드의 이야기를 광고가 아닌 한 편의 영화처럼 전달하는 필름을 제작합니다.',
+  };
+  document.getElementById('svcList').innerHTML = GENRES.filter((g) => g.key !== 'all').map((g, i) => `
+    <li><a class="svc" href="works.html?genre=${g.key}">
+      <span class="svc-no">${String(i + 1).padStart(2, '0')}</span>
+      <span class="svc-name">${g.en}<small>${g.ko}</small></span>
+      <span class="svc-desc">${SVC[g.key] || ''}</span>
+      <span class="svc-go">→</span>
+    </a></li>`).join('');
+
+  observeReveals();
+})();
+
+/* ---------------- 첫 화면 → 작품 보기로 넘어갈 때 나머지 공개 ---------------- */
+(function () {
+  const rest = document.getElementById('rest');
+  const ids = ['works', 'about', 'services', 'contact'];
+  function reveal(id, smooth) {
+    if (rest.hidden) { rest.hidden = false; window.StudioHong.observeReveals(); }
+    const el = document.getElementById(id);
+    if (!el) return;
+    requestAnimationFrame(() => {
+      const y = el.getBoundingClientRect().top + window.scrollY - (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--nav-h')) || 0);
+      window.scrollTo({ top: y, behavior: smooth ? 'smooth' : 'auto' });
+    });
+  }
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('a[href^="#"]');
+    if (!a) return;
+    const id = a.getAttribute('href').slice(1);
+    if (id === 'top') { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+    if (!ids.includes(id)) return;
+    e.preventDefault();
+    reveal(id, true); // 주소에 #를 남기지 않아, 새로고침하면 항상 첫 화면부터 시작
+  });
+  const h = location.hash.slice(1);
+  if (ids.includes(h)) reveal(h, false);
+})();
+
+/* ---------------- CONTACT (mailto) ---------------- */
+document.getElementById('contactForm').addEventListener('submit', function (e) {
+  e.preventDefault();
+  const f = new FormData(this);
+  const type = f.get('type') || '미선택';
+  const body = [
+    `프로젝트 종류: ${type}`,
+    `원하는 영상 길이: ${f.get('length') || '-'}`,
+    `희망 일정: ${f.get('schedule') || '-'}`,
+    `이름 · 소속: ${f.get('name') || '-'}`,
+    `회신 이메일: ${f.get('email') || '-'}`,
+    '', '문의 내용:', f.get('message') || '',
+  ].join('\n');
+  window.location.href = `mailto:dwsmins1@gmail.com?subject=${encodeURIComponent(`[STUDIO HONG 제작 문의] ${type}`)}&body=${encodeURIComponent(body)}`;
+});
+document.getElementById('yr').textContent = new Date().getFullYear();
+</script>
+</body>
+</html>
