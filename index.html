@@ -230,7 +230,7 @@
 <section class="hero" data-screen-label="01 Hero">
   <div class="hero-film" id="heroFilm">
     <!-- 영상은 JS가 화면 크기에 맞는 파일(720p / 1080p)을 골라 1회만 재생 -->
-    <video id="heroVideo" muted playsinline preload="auto" disablepictureinpicture aria-hidden="true"></video>
+    <video id="heroVideo" data-has-audio="true" muted playsinline preload="auto" disablepictureinpicture aria-hidden="true"></video>
     <img id="heroStill" src="assets/hero-poster-sm.jpg"
          srcset="assets/hero-poster-sm.jpg 960w, assets/hero-poster.jpg 1920w"
          sizes="(max-width: 899px) 118vw, 64vw"
