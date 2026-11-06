@@ -392,9 +392,11 @@
 <script src="site.js"></script>
 <script>
 /* ---------------- HERO FILM ----------------
-   영상과 소리는 하나의 파일(영상 트랙) → 항상 싱크가 맞고, 둘 다 1회만 재생된다.
-   소리는 처음부터 켜진 상태로 재생을 시도하고, 브라우저가 막으면
-   무음으로 재생을 이어가다가 첫 터치·클릭·스크롤·키 입력에서 즉시 음소거를 푼다. */
+   영상+소리는 같은 파일 → 항상 싱크가 맞고 1회만 재생된다.
+   · 처음부터 소리 켜짐 (버튼은 '소리 끄기' 상태로 시작)
+   · 5초 재생이 끝나면 자동으로 소리도 꺼지고 버튼이 '소리 켜기'로 돌아온다
+   · 브라우저가 소리 자동재생을 막은 경우엔 무음으로 재생을 이어가다가
+     첫 터치·클릭·스크롤 순간 음소거를 푼다 (표시는 계속 '켜짐') */
 (function () {
   const film = document.getElementById('heroFilm');
   const v = document.getElementById('heroVideo');
@@ -408,13 +410,12 @@
   const saveData = navigator.connection && (navigator.connection.saveData || /(^|-)2g$/.test(navigator.connection.effectiveType || ''));
   if (reduce || saveData) { showStill(); return; }
 
-  /* ---------- 소스 선택 (소리 포함된 파일) ---------- */
   const small = window.innerWidth < 900;
   const webm = v.canPlayType('video/webm; codecs="vp9"');
   v.src = small ? 'assets/hero-720.mp4' : (webm ? 'assets/hero-1080.webm' : 'assets/hero-1080.mp4');
   v.loop = false;
 
-  let soundOn = false;    /* 지금 소리 켜짐 */
+  let labelOn = true;     /* 버튼 표시: 켜짐 */
   let userMuted = false;  /* 사용자가 직접 껐는지 → 자동으로 되켜지 않음 */
   let fadeId = null;
 
@@ -431,6 +432,7 @@
   };
 
   const paint = (on) => {
+    labelOn = on;
     if (!soundBtn) return;
     soundBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
     if (soundLabel) soundLabel.textContent = on ? '소리 끄기' : '소리 켜기';
@@ -438,25 +440,29 @@
 
   const unmute = (ms) => {
     if (v.muted) { v.volume = 0; v.muted = false; }
-    soundOn = true;
     paint(true);
     stopGestureWatch();
-    fade(MAX_VOL, ms);
+    fade(MAX_VOL, ms || 600);
   };
 
   const mute = (ms) => {
-    soundOn = false;
     paint(false);
-    fade(0, ms);
-    setTimeout(() => { if (!soundOn) v.muted = true; }, ms + 30);
+    fade(0, ms || 250);
+    setTimeout(() => { if (!labelOn) v.muted = true; }, (ms || 250) + 40);
   };
 
-  /* ---------- 첫 제스처에서 자동으로 소리 켜기 ---------- */
+  /* ---------- 재생이 끝나면(=5초) 자동으로 소리 끔 + 버튼 원복 ---------- */
+  const finish = () => {
+    clearTimeout(timeout);
+    if (hasAudio) { paint(false); v.muted = true; }
+  };
+
+  /* ---------- 첫 제스처에서 자동으로 음소거 해제 ---------- */
   const GESTURES = ['pointerdown', 'touchstart', 'keydown', 'wheel'];
   const onGesture = () => {
-    if (!hasAudio || userMuted || soundOn) return;
-    if (v.ended) { /* 이미 끝났으면 → 처음부터 소리와 함께 다시 재생 */ replay(); return; }
-    unmute(700);
+    if (!hasAudio || userMuted) return;
+    if (v.ended) { replay(); return; }
+    if (v.muted) unmute(700);
   };
   function stopGestureWatch() {
     GESTURES.forEach((ev) => window.removeEventListener(ev, onGesture, { passive: true }));
@@ -470,26 +476,28 @@
     film.classList.remove('still');
     v.currentTime = 0;
     v.muted = false; v.volume = 0;
-    soundOn = true; userMuted = false;
+    userMuted = false;
     paint(true);
     const p = v.play();
     if (p && p.catch) p.catch(() => {});
-    fade(MAX_VOL, 700);
+    fade(MAX_VOL, 500);
   };
 
   if (soundBtn && hasAudio) {
     soundBtn.hidden = false;
-    paint(false);
+    paint(true);
     soundBtn.addEventListener('click', () => {
-      if (soundOn) { userMuted = true; mute(250); }
-      else { userMuted = false; if (v.ended) replay(); else unmute(500); }
+      if (v.ended) { replay(); return; }
+      if (v.muted) { userMuted = false; unmute(500); }
+      else if (labelOn) { userMuted = true; mute(250); }
+      else { userMuted = false; unmute(400); }
     });
   }
 
-  /* ---------- 재생 시작: 소리 켠 채로 시도 ---------- */
+  /* ---------- 재생 시작: 소리 쾌적 상태로 시도 ---------- */
   let timeout, started = false;
   v.addEventListener('error', () => { clearTimeout(timeout); showStill(); });
-  v.addEventListener('ended', () => { clearTimeout(timeout); });
+  v.addEventListener('ended', finish);
 
   const start = () => {
     if (started) return; started = true;
@@ -505,14 +513,15 @@
     /* 1) 소리 켠 채 재생 시도 */
     v.muted = false;
     v.volume = 0;
+    paint(true);
     const p = v.play();
-    if (!p || !p.then) { unmute(700); return; }
-    p.then(() => { soundOn = true; paint(true); fade(MAX_VOL, 700); })
+    if (!p || !p.then) { fade(MAX_VOL, 700); return; }
+    p.then(() => { fade(MAX_VOL, 700); })
      .catch(() => {
-       /* 2) 차단 → 무음으로 계속 재생하고, 첫 제스처에서 바로 소리 켬 */
+       /* 2) 차단 → 무음으로 재생 지속, 표시는 '켜짐' 유지, 첫 제스처에 소리 켬 */
        v.muted = true;
        v.volume = MAX_VOL;
-       paint(false);
+       paint(true);
        watchGesture();
        const p2 = v.play();
        if (p2 && p2.catch) p2.catch(() => { clearTimeout(timeout); showStill(); });
