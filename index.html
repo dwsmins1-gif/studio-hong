@@ -66,6 +66,25 @@
   }
   .hero-scroll::after { content: ''; width: 1px; height: 32px; background: linear-gradient(var(--ink-2), transparent); }
 
+  /* 사운드 토글 (오디오 트랙이 있을 때만 노출) */
+  .hero-sound {
+    position: absolute; z-index: 3; right: max(var(--pad), calc((100vw - var(--max)) / 2 + var(--pad)));
+    bottom: 26px; display: inline-flex; align-items: center; gap: 9px;
+    height: 38px; padding: 0 15px 0 12px; background: transparent;
+    border: 1px solid rgba(28, 26, 23, .32); color: var(--ink-2); border-radius: 0; cursor: pointer;
+    font-family: inherit; font-size: 11px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase;
+    transition: color .25s ease, border-color .25s ease;
+  }
+  .hero-sound:hover { color: var(--ink); border-color: var(--ink); }
+  .hero-sound svg { width: 15px; height: 15px; flex: none; }
+  .hero-sound .wave, .hero-sound .mute-x { transition: opacity .3s ease; }
+  .hero-sound .wave { opacity: 0; }
+  .hero-sound[aria-pressed="true"] .wave { opacity: 1; }
+  .hero-sound[aria-pressed="true"] .mute-x { opacity: 0; }
+  @media (max-width: 899px) {
+    .hero-sound { position: static; align-self: center; margin: 26px var(--pad) 0; }
+  }
+
   @media (max-width: 1100px) {
     .hero { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); }
   }
@@ -227,6 +246,14 @@
       <a href="#contact" class="btn btn-ghost">제작 문의</a>
     </div>
   </div>
+    <button class="hero-sound" id="heroSound" type="button" aria-pressed="false" hidden>
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M2.2 6.1h2.3L7.7 3.1v9.8L4.5 9.9H2.2z"/>
+        <path class="wave" d="M10.1 5.7a3 3 0 0 1 0 4.6M11.9 4a5.3 5.3 0 0 1 0 8"/>
+        <path class="mute-x" d="M10.4 6.4l3 3.2M13.4 6.4l-3 3.2"/>
+      </svg>
+      <span class="label">소리 켜기</span>
+    </button>
 </section>
 
 <div id="rest" hidden>
@@ -400,6 +427,55 @@
     }, { threshold: [0, 0.5] });
     io.observe(film);
   } else { arm(); start(); }
+
+  /* ---------------- 사운드 토글: 자동재생 정책상 무음 시작 → 클릭으로 켬 ---------------- */
+  const soundBtn = document.getElementById('heroSound');
+  if (soundBtn && v.dataset.hasAudio === 'true') {
+    soundBtn.hidden = false;
+    const label = soundBtn.querySelector('.label');
+    let fadeId = null;
+    const fadeTo = (target, ms) => {
+      clearInterval(fadeId);
+      const from = v.volume, delta = target - from;
+      let t = 0;
+      fadeId = setInterval(() => {
+        t += 16;
+        const k = Math.min(1, t / ms);
+        v.volume = Math.min(1, Math.max(0, from + delta * k));
+        if (k >= 1) clearInterval(fadeId);
+      }, 16);
+    };
+    const turnOn = () => {
+      soundBtn.setAttribute('aria-pressed', 'true');
+      label.textContent = '소리 끄기';
+      const replay = v.ended || v.paused;
+      if (replay) {
+        /* 이미 끝났으면 처음부터 소리와 함께 다시 재생 */
+        v.currentTime = 0; v.volume = 0; v.muted = false;
+        film.classList.remove('still');
+        v.addEventListener('playing', () => fadeTo(0.9, 700), { once: true });
+        const pr = v.play();
+        if (pr && pr.catch) pr.catch(() => { soundBtn.setAttribute('aria-pressed', 'false'); label.textContent = '소리 켜기'; });
+      } else {
+        v.muted = false;
+        fadeTo(0.9, 500);
+      }
+    };
+    const turnOff = () => {
+      soundBtn.setAttribute('aria-pressed', 'false');
+      label.textContent = '소리 켜기';
+      fadeTo(0, 250);
+      setTimeout(() => { v.muted = true; }, 280);
+    };
+    soundBtn.addEventListener('click', () => { if (v.muted) turnOn(); else turnOff(); });
+
+    /* 히어로를 벗어나면 자동 음소거 */
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver((es) => {
+        es.forEach((e) => { if (!e.isIntersecting && !v.muted) turnOff(); });
+      }, { threshold: 0 }).observe(film);
+    }
+  }
 })();
 
 /* ---------------- WORKS ---------------- */
