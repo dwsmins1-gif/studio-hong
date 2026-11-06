@@ -391,9 +391,9 @@
 <script src="works-data.js"></script>
 <script src="site.js"></script>
 <script>
-/* ---------------- HERO FILM ----------------
-   소리 켠 채로 먼저 재생을 시도하고, 브라우저가 막으면 무음으로 재생한 뒤
-   첫 터치·클릭·스크롤·키 입력에서 즉시 소리를 켠다. (재방문 시엔 처음부터 소리 재생) */
+/* ---------------- HERO FILM + LOOPING SOUND ----------------
+   영상은 1회 재생 후 마지막 프레임에서 정지하고,
+   사운드는 별도 오디오 파일(hero-audio.mp3)을 Web Audio로 끊김 없이 무한 루프한다. */
 (function () {
   const film = document.getElementById('heroFilm');
   const v = document.getElementById('heroVideo');
@@ -407,27 +407,17 @@
   const saveData = navigator.connection && (navigator.connection.saveData || /(^|-)2g$/.test(navigator.connection.effectiveType || ''));
   if (reduce || saveData) { showStill(); return; }
 
+  /* ---------- 영상: 1회 재생, 끝나면 그대로 정지 ---------- */
   const small = window.innerWidth < 900;
   const webm = v.canPlayType('video/webm; codecs="vp9"');
   v.src = small ? 'assets/hero-720.mp4' : (webm ? 'assets/hero-1080.webm' : 'assets/hero-1080.mp4');
   v.loop = false;
+  v.muted = true; v.defaultMuted = true;   /* 소리는 별도 오디오가 담당 → 영상은 항상 무음 */
 
-  let soundOn = false;    // 지금 소리가 켜져 있는지
-  let userMuted = false;  // 사용자가 직접 껐는지 (자동으로 되켜지 않음)
-  let unlocked = false;   // 소리 재생 권한을 한 번이라도 얻었는지
-  let fadeId = null;
-
-  const fade = (to, ms) => {
-    clearInterval(fadeId);
-    const from = v.volume, d = to - from;
-    let t = 0;
-    fadeId = setInterval(() => {
-      t += 16;
-      const k = Math.min(1, t / ms);
-      v.volume = Math.min(1, Math.max(0, from + d * k));
-      if (k >= 1) { clearInterval(fadeId); if (to === 0) v.muted = true; }
-    }, 16);
-  };
+  /* ---------- 소리: 무한 루프 엔진 ---------- */
+  const AC = window.AudioContext || window.webkitAudioContext;
+  let ctx = null, gainNode = null, srcNode = null, decoded = null, fallback = null;
+  let soundOn = false, userMuted = false, unlocked = false;
 
   const paint = (on) => {
     if (!soundBtn) return;
@@ -435,77 +425,117 @@
     if (soundLabel) soundLabel.textContent = on ? '소리 끄기' : '소리 켜기';
   };
 
-  const soundOnNow = () => {
-    unlockListeners();
-    if (v.muted) { v.muted = false; v.volume = 0; }
-    if (v.paused && !v.ended) { const pr = v.play(); if (pr && pr.catch) pr.catch(() => {}); }
-    soundOn = true; unlocked = true; userMuted = false;
-    paint(true);
-    fade(MAX_VOL, 600);
+  const setVol = (to, ms) => {
+    if (ctx && gainNode) {
+      const g = gainNode.gain, t = ctx.currentTime;
+      g.cancelScheduledValues(t);
+      g.setValueAtTime(g.value, t);
+      g.linearRampToValueAtTime(to, t + ms / 1000);
+    } else if (fallback) {
+      const from = fallback.volume, d = to - from; let e = 0;
+      clearInterval(setVol._id);
+      setVol._id = setInterval(() => {
+        e += 16; const k = Math.min(1, e / ms);
+        fallback.volume = Math.min(1, Math.max(0, from + d * k));
+        if (k >= 1) clearInterval(setVol._id);
+      }, 16);
+    }
   };
 
-  const soundOffNow = () => { soundOn = false; paint(false); fade(0, 220); };
+  const startLoop = () => {
+    if (!ctx || !decoded || srcNode) return;
+    srcNode = ctx.createBufferSource();
+    srcNode.buffer = decoded;
+    srcNode.loop = true;
+    srcNode.connect(gainNode);
+    srcNode.start(0);
+  };
+
+  const useFallback = () => {
+    if (fallback) return;
+    if (ctx) { try { ctx.close(); } catch (e) {} }
+    ctx = null; gainNode = null; srcNode = null;
+    fallback = new Audio('assets/hero-audio.mp3');
+    fallback.loop = true;
+    fallback.preload = 'auto';
+    fallback.volume = 0;
+    if (soundOn) fallback.play().catch(() => {});
+  };
+
+  const loadAudio = () => {
+    if (decoded || fallback) return;
+    if (!AC) { useFallback(); return; }
+    if (!ctx) {
+      try {
+        ctx = new AC();
+        gainNode = ctx.createGain();
+        gainNode.gain.value = 0;
+        gainNode.connect(ctx.destination);
+      } catch (e) { useFallback(); return; }
+    }
+    fetch('assets/hero-audio.mp3')
+      .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error('audio fetch'))))
+      .then((b) => new Promise((res, rej) => ctx.decodeAudioData(b, res, rej)))
+      .then((buf) => { decoded = buf; startLoop(); })
+      .catch(useFallback);
+  };
+
+  const soundOnNow = () => {
+    stopGestureWatch();
+    loadAudio();
+    if (ctx) {
+      startLoop();
+      const r = ctx.resume();
+      if (r && r.catch) r.catch(() => {});
+    }
+    if (fallback) { const pr = fallback.play(); if (pr && pr.catch) pr.catch(() => {}); }
+    soundOn = true; unlocked = true; userMuted = false;
+    setVol(MAX_VOL, 700);
+    paint(true);
+  };
+
+  const soundOffNow = () => { soundOn = false; setVol(0, 250); paint(false); };
 
   if (soundBtn && hasAudio) {
     soundBtn.hidden = false;
     paint(false);
     soundBtn.addEventListener('click', () => {
-      if (!soundOn) {
-        userMuted = false;
-        if (v.ended || (v.paused && v.currentTime > 0)) {
-          /* 이미 끝났으면 처음부터 소리와 함께 다시 재생 */
-          film.classList.remove('still');
-          v.currentTime = 0;
-          v.muted = false; v.volume = 0;
-          const pr = v.play();
-          if (pr && pr.catch) pr.catch(() => {});
-          soundOn = true; unlocked = true; paint(true);
-          fade(MAX_VOL, 700);
-        } else { soundOnNow(); }
-      } else {
-        userMuted = true; soundOffNow();
-      }
+      if (soundOn) { userMuted = true; soundOffNow(); }
+      else { soundOnNow(); }
     });
   }
 
-  /* 첫 제스처(터치·클릭·스크롤·키)에서 자동으로 소리 켜기 */
-  const GESTURES = ['pointerdown', 'touchstart', 'keydown', 'wheel', 'scroll'];
-  function unlockListeners() {
+  /* ---------- 첫 제스처에서 자동으로 소리 켜기 ---------- */
+  const GESTURES = ['pointerdown', 'touchstart', 'keydown', 'wheel'];
+  const onGesture = () => { if (!hasAudio || userMuted || soundOn) return; soundOnNow(); };
+  function stopGestureWatch() {
     GESTURES.forEach((ev) => window.removeEventListener(ev, onGesture, { passive: true }));
-  }
-  function onGesture() {
-    if (!hasAudio || userMuted || soundOn || v.ended) return;
-    soundOnNow();
   }
   if (hasAudio) GESTURES.forEach((ev) => window.addEventListener(ev, onGesture, { passive: true }));
 
-  let timeout;
+  /* ---------- 재생 시작 ---------- */
+  let timeout, started = false;
   v.addEventListener('error', () => { clearTimeout(timeout); showStill(); });
   v.addEventListener('ended', () => { clearTimeout(timeout); });
 
-  let started = false;
   const start = () => {
     if (started) return; started = true;
     timeout = setTimeout(() => { if (v.currentTime === 0) { showStill(); v.pause(); } }, 3500);
-
-    if (!hasAudio) {
-      v.muted = true;
-      const p = v.play();
-      if (p && p.catch) p.catch(() => { clearTimeout(timeout); showStill(); });
-      return;
-    }
-    /* 1) 소리 켠 채로 재생 시도 */
-    v.muted = false; v.volume = 0;
     const p = v.play();
-    if (!p || !p.then) { soundOnNow(); return; }
-    p.then(() => { soundOn = true; unlocked = true; paint(true); fade(MAX_VOL, 700); })
-     .catch(() => {
-       /* 2) 차단되면 무음으로 계속 재생 — 첫 제스처에서 소리 켜짐 */
-       v.muted = true; v.volume = MAX_VOL;
-       paint(false);
-       const p2 = v.play();
-       if (p2 && p2.catch) p2.catch(() => { clearTimeout(timeout); showStill(); });
-     });
+    if (p && p.catch) p.catch(() => { clearTimeout(timeout); showStill(); });
+
+    if (!hasAudio) return;
+    loadAudio();
+    if (ctx) {
+      const r = ctx.resume();
+      if (r && r.then) {
+        r.then(() => {
+          if (ctx.state !== 'running' || userMuted) return;
+          startLoop(); soundOn = true; unlocked = true;
+          setVol(MAX_VOL, 700); paint(true);
+        }).catch(() => {});
+      }
+    }
   };
 
   if ('IntersectionObserver' in window) {
@@ -514,7 +544,7 @@
     }, { threshold: [0, 0.5] });
     io.observe(film);
 
-    /* 히어로를 벗어나면 소리를 줄이고, 다시 보이면(권한이 있으면) 되살린다 */
+    /* 히어로를 벗어나면 소리만 낮춘다 (오디오 루프는 계속 돌고, 돌아오면 다시 올라옴) */
     new IntersectionObserver((es) => {
       es.forEach((e) => {
         if (!hasAudio || userMuted) return;
