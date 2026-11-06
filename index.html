@@ -401,7 +401,7 @@
   const soundBtn = document.getElementById('heroSound');
   const soundLabel = soundBtn && soundBtn.querySelector('.label');
   const hasAudio = v.dataset.hasAudio === 'true';
-  const MAX_VOL = 0.9;
+  const MAX_VOL = 0.5;
   const showStill = () => film.classList.add('still');
 
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
