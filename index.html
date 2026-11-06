@@ -76,6 +76,9 @@
     transition: color .25s ease, border-color .25s ease;
   }
   .hero-sound:hover { color: var(--ink); border-color: var(--ink); }
+  .hero-sound-wrap { position: absolute; z-index: 3; right: max(var(--pad), calc((100vw - var(--max)) / 2 + var(--pad))); bottom: 26px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+  .hero-hint { margin: 0; font-size: 11px; letter-spacing: .06em; color: var(--muted); transition: opacity .4s ease; }
+  .hero-hint[hidden] { display: none; }
   .hero-sound svg { width: 15px; height: 15px; flex: none; }
   .hero-sound .wave, .hero-sound .mute-x { transition: opacity .3s ease; }
   .hero-sound .wave { opacity: 0; }
@@ -246,6 +249,8 @@
       <a href="#contact" class="btn btn-ghost">제작 문의</a>
     </div>
   </div>
+    <div class="hero-sound-wrap">
+    <p class="hero-hint" id="heroHint" hidden>화면을 누르면 소리가 켜집니다</p>
     <button class="hero-sound" id="heroSound" type="button" aria-pressed="false" hidden>
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M2.2 6.1h2.3L7.7 3.1v9.8L4.5 9.9H2.2z"/>
@@ -254,6 +259,7 @@
       </svg>
       <span class="label">소리 켜기</span>
     </button>
+    </div>
 </section>
 
 <div id="rest" hidden>
@@ -392,109 +398,95 @@
 <script src="site.js"></script>
 <script>
 /* ---------------- HERO FILM ----------------
-   영상: 항상 무음으로 재생(모든 브라우저에서 자동재생 보장) → 5초 후 마지막 프레임 정지
-   소리: 같은 트랙에서 뽑은 hero-audio.mp3를 영상과 같은 지점에서 1회만 재생 (루프 없음)
-   · 처음부터 소리 켜짐 (버튼은 '소리 끄기'로 시작)
-   · 브라우저가 소리를 막으면 첫 터치·클릭·스크롤에서 영상 위치에 맞춰 이어서 재생
-   · 영상이 끝나면 소리도 자동으로 꺼지고 버튼이 '소리 켜기'로 원복 */
+   영상과 소리는 같은 파일(오디오는 50% 볼륨으로 미리 구워둠) → 모든 기기에서 동일한 크기로,
+   항상 완벽히 싱크된 채 1회만 재생된다.
+   · 진입: 소리 켠 채 재생 시도 → 브라우저가 막으면 무음으로 재생(영상은 반드시 나옴)
+   · 막힌 경우 첫 터치·클릭·스크롤·휠·키 입력 순간 즉시 소리가 켜진다 (버튼을 찾을 필요 없음)
+   · 5초 영상이 끝나면 소리도 자동으로 꺼지고 버튼이 '소리 켜기'로 원복 */
 (function () {
   const film = document.getElementById('heroFilm');
   const v = document.getElementById('heroVideo');
   const soundBtn = document.getElementById('heroSound');
   const soundLabel = soundBtn && soundBtn.querySelector('.label');
+  const hint = document.getElementById('heroHint');
   const hasAudio = v.dataset.hasAudio === 'true';
-  const MAX_VOL = 0.5;
 
   const showStill = () => film.classList.add('still');
-
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const saveData = navigator.connection && (navigator.connection.saveData || /(^|-)2g$/.test(navigator.connection.effectiveType || ''));
   if (reduce || saveData) { showStill(); return; }
 
-  /* ---------- 영상: 반드시 재생되는 H.264/AAC mp4, 항상 무음 ---------- */
   v.src = window.innerWidth < 900 ? 'assets/hero-720.mp4' : 'assets/hero-1080.mp4';
   v.loop = false;
-  v.muted = true;
-  v.defaultMuted = true;
+  v.preload = 'auto';
 
-  /* ---------- 소리: 별도 오디오(1회 재생), 영상 위치에 동기화 ---------- */
-  const audio = hasAudio ? new Audio('assets/hero-audio.mp3') : null;
-  if (audio) { audio.preload = 'auto'; audio.loop = false; audio.volume = 0; }
-
-  let userMuted = false, soundOn = false, started = false, fadeId = null;
-
-  const fade = (to, ms, done) => {
-    if (!audio) return;
-    clearInterval(fadeId);
-    const from = audio.volume, d = to - from;
-    let t = 0;
-    fadeId = setInterval(() => {
-      t += 16;
-      const k = Math.min(1, t / ms);
-      audio.volume = Math.min(1, Math.max(0, from + d * k));
-      if (k >= 1) { clearInterval(fadeId); if (done) done(); }
-    }, 16);
-  };
+  let userMuted = false, started = false;
 
   const paint = (on) => {
-    soundOn = on;
     if (!soundBtn) return;
     soundBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
     if (soundLabel) soundLabel.textContent = on ? '소리 끄기' : '소리 켜기';
+    if (hint) hint.hidden = on || !hasAudio;
   };
 
-  /* 영상과 같은 지점에서 소리를 시작한다 (끝났으면 시작하지 않음) */
-  const syncStart = (alsoUnmute) => {
-    if (!audio || !hasAudio) return;
-    if (v.ended || v.currentTime >= (audio.duration || 999)) return;
-    try { audio.currentTime = Math.max(0, v.currentTime); } catch (e) {}
-    audio.muted = false;
-    audio.volume = 0;
-    const p = audio.play();
-    const ok = () => { paint(true); fade(MAX_VOL, 700); stopGestureWatch(); };
-    if (p && p.then) p.then(ok).catch(() => { if (alsoUnmute) paint(true); });
-    else ok();
-  };
-
-  const GESTURES = ['pointerdown', 'touchstart', 'keydown', 'wheel'];
+  /* --- 사용자 입력이 들어오면 즉시 음소거 해제 --- */
+  const GESTURES = ['pointerdown', 'touchstart', 'mousedown', 'keydown', 'wheel', 'scroll', 'touchmove'];
   const onGesture = () => {
     if (!hasAudio || userMuted) return;
     if (v.ended) return;
-    syncStart(false);
+    v.muted = false;
+    if (v.paused) { const p = v.play(); if (p && p.catch) p.catch(() => {}); }
+    paint(true);
   };
-  function stopGestureWatch() { GESTURES.forEach((ev) => window.removeEventListener(ev, onGesture, { passive: true })); }
-  function watchGesture() { if (hasAudio) GESTURES.forEach((ev) => window.addEventListener(ev, onGesture, { passive: true })); }
+  const watchGesture = () => GESTURES.forEach((ev) => window.addEventListener(ev, onGesture, { passive: true, capture: true }));
+  const stopGesture = () => GESTURES.forEach((ev) => window.removeEventListener(ev, onGesture, { capture: true }));
 
+  /* --- 버튼: 켜기/끄기 / 끝난 뒤엔 처음부터 소리와 함께 다시 재생 --- */
   if (soundBtn && hasAudio) {
     soundBtn.hidden = false;
-    paint(true);
-    soundBtn.addEventListener('click', () => {
-      if (!audio || v.ended) return;
-      if (soundOn && !audio.paused) {
-        userMuted = true; paint(false); fade(0, 250, () => audio.pause());
-      } else {
-        userMuted = false; syncStart(true);
+    paint(false);
+    soundBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (v.ended) {                       /* 끝난 상태 → 다시보기 */
+        film.classList.remove('still');
+        v.currentTime = 0; v.muted = false; userMuted = false;
+        paint(true);
+        const p = v.play(); if (p && p.catch) p.catch(() => {});
+        return;
       }
+      if (v.muted || userMuted) { userMuted = false; v.muted = false; paint(true); stopGesture(); }
+      else { userMuted = true; v.muted = true; paint(false); }
     });
   }
 
-  /* 영상 시작 → 소리 시작(1회) */
-  v.addEventListener('playing', () => {
-    if (!started) { started = true; if (!userMuted) syncStart(true); watchGesture(); }
-  }, { once: true });
-
-  /* 영상 종료(5초) → 소리 자동 정지 + 버튼 원복 */
+  /* --- 종료: 소리 자동 끔 + 버튼 원복 --- */
   v.addEventListener('ended', () => {
-    if (!audio) return;
-    fade(0, 200, () => { audio.pause(); });
+    if (!hasAudio) return;
+    v.muted = true; userMuted = false;
     paint(false);
   });
-
   v.addEventListener('error', () => showStill());
 
+  /* --- 시작: 소리 켜고 시도 → 막히면 무음으로 반드시 재생 --- */
   const start = () => {
-    const p = v.play();                       /* 무음이라 어디서나 재생됨 */
-    if (p && p.catch) p.catch(() => {});
+    if (started) return; started = true;
+    v.muted = false;
+    const p = v.play();
+    if (p && p.then) {
+      p.then(() => { paint(true); })
+       .catch(() => {                     /* 자동재생 차단 → 무음 재생 + 제스처 대기 */
+         v.muted = true; paint(false); watchGesture();
+         const q = v.play(); if (q && q.catch) q.catch(() => {});
+       });
+    } else { paint(true); }
+
+    /* 안전장치: 1.5초 안에 재생이 시작되지 않으면 무음으로 강제 재생 */
+    setTimeout(() => {
+      if (v.currentTime === 0) {
+        v.muted = true; paint(false); watchGesture();
+        const q = v.play(); if (q && q.catch) q.catch(() => {});
+      }
+    }, 1500);
   };
 
   if ('IntersectionObserver' in window) {
