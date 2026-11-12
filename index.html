@@ -10,7 +10,7 @@
 <meta property="og:image" content="assets/hero-poster.jpg">
 <meta name="theme-color" content="#D2C8BC">
 <link rel="preload" as="image" href="assets/hero-poster-sm.jpg" media="(max-width: 899px)">
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css?v=20261112">
 <style>
   /* ================= HERO ================= */
   .hero {
@@ -249,6 +249,7 @@
       <a href="#contact" class="btn btn-ghost">제작 문의</a>
     </div>
   </div>
+
     <div class="hero-sound-wrap">
     <p class="hero-hint" id="heroHint" hidden>화면을 누르면 소리가 켜집니다</p>
     <button class="hero-sound" id="heroSound" type="button" aria-pressed="false" hidden>
@@ -260,7 +261,7 @@
       <span class="label">소리 켜기</span>
     </button>
     </div>
-</section>
+  </section>
 
 <div id="rest" hidden>
 
@@ -343,6 +344,7 @@
           <label class="chip"><input type="radio" name="type" value="드라마"><span>드라마</span></label>
           <label class="chip"><input type="radio" name="type" value="뮤직비디오"><span>뮤직비디오</span></label>
           <label class="chip"><input type="radio" name="type" value="브랜드 영상"><span>브랜드 영상</span></label>
+          <label class="chip"><input type="radio" name="type" value="기독교"><span>기독교</span></label>
           <label class="chip"><input type="radio" name="type" value="기타"><span>기타</span></label>
         </div>
       </fieldset>
@@ -394,8 +396,8 @@
 </div><!-- /#rest -->
 </main>
 
-<script src="works-data.js"></script>
-<script src="site.js"></script>
+<script src="works-data.js?v=20261112"></script>
+<script src="site.js?v=20261112"></script>
 <script>
 /* ---------------- HERO FILM ----------------
    영상과 소리는 같은 파일(오디오는 50% 볼륨으로 미리 구워둠) → 모든 기기에서 동일한 크기로,
@@ -522,6 +524,8 @@
     drama: '인물의 감정과 관계에 집중한 서사형 영상. 단편과 시리즈 형식 모두 가능합니다.',
     mv: '곡의 무드와 가사를 해석해 음악과 함께 기억되는 비주얼을 만듭니다.',
     brand: '브랜드의 이야기를 광고가 아닌 한 편의 영화처럼 전달하는 필름을 제작합니다.',
+    faith: '성경 속 이야기와 신앙의 메시지를 시네마틱 영상으로 담습니다.',
+    health: '백세 시대를 위한 건강 정보와 생활 습관을 쉽고 친근한 영상으로 전합니다.',
   };
   document.getElementById('svcList').innerHTML = GENRES.filter((g) => g.key !== 'all').map((g, i) => `
     <li><a class="svc" href="works.html?genre=${g.key}">
