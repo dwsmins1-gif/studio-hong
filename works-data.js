@@ -33,6 +33,11 @@ window.STUDIO_HONG_WORKS = [
     desc: '역사적 배경을 바탕으로 제작한 AI 시네마틱 단편',
     youtubeId: 'tvOXhCQr_a8', thumb: '', featured: true },
 
+  { title: '초보자도 따라 하는 Higgsfield AI 영상 만들기 — 한국전쟁 캐릭터부터 영상까지', genre: 'brand', year: '2026', runtime: '',
+    desc: 'Higgsfield 협찬 튜토리얼. 6.25 전쟁 국군 소대장 캐릭터 제작부터 캐릭터 시트, 이미지→영상 완성까지 전 과정을 순서대로 정리했습니다.',
+    youtubeId: 'm1Sx2LVSqQQ', thumb: '', featured: false },
+
+
   { title: '인류 최후의 반격', genre: 'sf', year: '', runtime: '',
     desc: '인류의 생존을 건 마지막 반격을 그린 AI 시네마틱 영상',
     youtubeId: 'jxIXNKwLur0', thumb: '', featured: false },
